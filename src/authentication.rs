@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use sha2::digest::HashMarker;
 use std::{collections::HashMap, fs, path};
 
 use crate::util::{self, hash_password};
@@ -17,6 +18,16 @@ pub enum Role {
     User,
 }
 
+impl std::fmt::Display for Role {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let v = match self {
+            Self::Admin => "admin",
+            Self::User => "user",
+        };
+        write!(f, "{v}")
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct UserDao {
     username: String,
@@ -30,6 +41,33 @@ impl UserDao {
             username: username.to_owned(),
             password: hash_password(password),
             role,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct User {
+    pub username: String,
+    pub role: Role,
+}
+
+impl User {
+    pub fn get_all() -> HashMap<String, Self> {
+        let user_daos = get_all_user_daos();
+        let mut users = HashMap::new();
+
+        user_daos.into_iter().for_each(|(k, v)| {
+            users.insert(k, User::from(v));
+        });
+        users
+    }
+}
+
+impl From<UserDao> for User {
+    fn from(value: UserDao) -> Self {
+        Self {
+            username: value.username,
+            role: value.role,
         }
     }
 }
