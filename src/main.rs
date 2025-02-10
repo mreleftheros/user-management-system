@@ -21,6 +21,13 @@ enum Command {
     },
     /// List all users
     List,
+    /// Update existing user
+    Update,
+    /// Delete existing user
+    Delete {
+        /// User username to delete
+        username: String,
+    },
 }
 
 fn print_users() {
@@ -53,5 +60,12 @@ fn main() {
         Command::List => {
             print_users();
         }
+        Command::Update => {
+            println!("update user");
+        }
+        Command::Delete { username } => user_management_system::delete_user(username)
+            .unwrap_or_else(|e| {
+                eprintln!("{e}");
+            }),
     }
 }

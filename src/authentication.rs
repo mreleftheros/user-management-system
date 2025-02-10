@@ -51,16 +51,6 @@ pub struct User {
     pub role: Role,
 }
 
-pub fn get_all_users() -> HashMap<String, User> {
-    let user_daos = get_all_user_daos();
-    let mut users = HashMap::new();
-
-    user_daos.into_iter().for_each(|(k, v)| {
-        users.insert(k, User::from(v));
-    });
-    users
-}
-
 pub fn set_user(username: String, password: String, admin: bool) {
     let password = hash_password(password.as_str());
     let mut users = get_all_user_daos();
@@ -74,6 +64,28 @@ pub fn set_user(username: String, password: String, admin: bool) {
     save_users(&users);
 
     println!("New user added");
+}
+
+pub fn get_all_users() -> HashMap<String, User> {
+    let user_daos = get_all_user_daos();
+    let mut users = HashMap::new();
+
+    user_daos.into_iter().for_each(|(k, v)| {
+        users.insert(k, User::from(v));
+    });
+    users
+}
+
+pub fn update_user() {}
+
+pub fn delete_user(username: String) -> Result<(), String> {
+    let mut user_daos = get_all_user_daos();
+    user_daos
+        .remove(&username)
+        .ok_or(format!("User {username} was not found"))?;
+    save_users(&user_daos);
+    println!("User {username} deleted");
+    Ok(())
 }
 
 impl From<UserDao> for User {
