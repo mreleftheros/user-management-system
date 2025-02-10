@@ -9,12 +9,22 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Create new user
+    Set {
+        /// Set user username
+        username: String,
+        /// Set user password
+        password: String,
+        /// Optional - Mark as an admin
+        #[arg(long)]
+        admin: Option<bool>,
+    },
     /// List all users
     List,
 }
 
 fn print_users() {
-    let all_users = user_management_system::User::get_all();
+    let all_users = user_management_system::get_all_users();
     println!("{:<20} {:<20}", "Username", "Role");
     println!("{:-<40}", "");
     all_users
@@ -33,6 +43,13 @@ fn main() {
         std::process::exit(1);
     };
     match command {
+        Command::Set {
+            username,
+            password,
+            admin,
+        } => {
+            user_management_system::set_user(username, password, admin.unwrap_or(false));
+        }
         Command::List => {
             print_users();
         }

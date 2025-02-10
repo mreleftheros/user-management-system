@@ -51,16 +51,29 @@ pub struct User {
     pub role: Role,
 }
 
-impl User {
-    pub fn get_all() -> HashMap<String, Self> {
-        let user_daos = get_all_user_daos();
-        let mut users = HashMap::new();
+pub fn get_all_users() -> HashMap<String, User> {
+    let user_daos = get_all_user_daos();
+    let mut users = HashMap::new();
 
-        user_daos.into_iter().for_each(|(k, v)| {
-            users.insert(k, User::from(v));
-        });
-        users
-    }
+    user_daos.into_iter().for_each(|(k, v)| {
+        users.insert(k, User::from(v));
+    });
+    users
+}
+
+pub fn set_user(username: String, password: String, admin: bool) {
+    let password = hash_password(password.as_str());
+    let mut users = get_all_user_daos();
+
+    let role = match admin {
+        true => Role::Admin,
+        false => Role::User,
+    };
+    let ud = UserDao::new(username.as_str(), password.as_str(), role);
+    users.insert(username, ud);
+    save_users(&users);
+
+    println!("New user added");
 }
 
 impl From<UserDao> for User {
@@ -85,6 +98,12 @@ fn get_default_user_daos() -> HashMap<String, UserDao> {
     user_daos
 }
 
+fn save_users(users: &HashMap<String, UserDao>) {
+    let file_path = path::Path::new(USER_JSON_PATH);
+    let json = serde_json::to_string(users).expect("Failed to turn to json");
+    fs::write(file_path, json).expect("Failed to write to path");
+}
+
 fn get_all_user_daos() -> HashMap<String, UserDao> {
     let file_path = path::Path::new(USER_JSON_PATH);
     if file_path.exists() {
@@ -95,8 +114,7 @@ fn get_all_user_daos() -> HashMap<String, UserDao> {
     } else {
         let user_daos = get_default_user_daos();
         // save to json and into a file before returning them
-        let json = serde_json::to_string(&user_daos).expect("Failed to turn to json");
-        fs::write(file_path, json).expect("Failed to write to path");
+        save_users(&user_daos);
         user_daos
     }
 }
