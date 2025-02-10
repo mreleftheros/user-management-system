@@ -1,8 +1,6 @@
 fn main() {
-    let result = user_management_system::try_login();
-    if result {
-        println!("Logged in");
-    } else {
-        println!("Failed to login");
-    }
+    let access = user_management_system::login().unwrap_or_else(|| {
+        eprintln!("Failed to login to service");
+        std::process::exit(1);
+    });
 }
