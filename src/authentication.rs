@@ -1,8 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, path};
 
-use serde::{Deserialize, Serialize};
-
-use crate::util;
+use crate::util::{self, hash_password};
 const MAX_ATTEMPTS: u8 = 3;
 const USER_JSON_PATH: &str = "users.json";
 
@@ -29,7 +28,7 @@ impl UserDao {
     fn new(username: &str, password: &str, role: Role) -> Self {
         Self {
             username: username.to_owned(),
-            password: password.to_owned(),
+            password: hash_password(password),
             role,
         }
     }
@@ -51,6 +50,7 @@ fn get_default_user_daos() -> HashMap<String, UserDao> {
 fn get_all_user_daos() -> HashMap<String, UserDao> {
     let file_path = path::Path::new(USER_JSON_PATH);
     if file_path.exists() {
+        // read from file
         let r = fs::read_to_string(file_path).expect("Failed to read path");
         let user_daos = serde_json::from_str(&r).expect("Failed to turn from json");
         user_daos
@@ -72,6 +72,7 @@ pub fn login() -> Option<Access> {
         let username = util::get_input("Enter username:");
         let username = username.to_lowercase();
         let password = util::get_input("Enter password:");
+        let password = util::hash_password(password.as_str());
 
         let Some(user) = user_daos.get(&username) else {
             attempts += 1;
