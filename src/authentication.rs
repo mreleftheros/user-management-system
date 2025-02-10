@@ -1,5 +1,10 @@
+use std::{collections::HashMap, fs, path};
+
+use serde::{Deserialize, Serialize};
+
 use crate::util;
 const MAX_ATTEMPTS: u8 = 3;
+const USER_JSON_PATH: &str = "users.json";
 
 #[derive(Debug)]
 pub enum Access {
@@ -7,13 +12,13 @@ pub enum Access {
     Denied,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Role {
     Admin,
     User,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct UserDao {
     username: String,
     password: String,
@@ -28,17 +33,39 @@ impl UserDao {
             role,
         }
     }
-    fn get_all() -> Vec<UserDao> {
-        vec![
-            Self::new("admin", "password", Role::Admin),
-            Self::new("bob", "password", Role::User),
-        ]
+}
+
+fn get_default_user_daos() -> HashMap<String, UserDao> {
+    let mut user_daos = HashMap::new();
+    user_daos.insert(
+        "admin".to_owned(),
+        UserDao::new("admin", "password", Role::Admin),
+    );
+    user_daos.insert(
+        "bob".to_owned(),
+        UserDao::new("bob", "password", Role::User),
+    );
+    user_daos
+}
+
+fn get_all_user_daos() -> HashMap<String, UserDao> {
+    let file_path = path::Path::new(USER_JSON_PATH);
+    if file_path.exists() {
+        let r = fs::read_to_string(file_path).expect("Failed to read path");
+        let user_daos = serde_json::from_str(&r).expect("Failed to turn from json");
+        user_daos
+    } else {
+        let user_daos = get_default_user_daos();
+        // save to json and into a file before returning them
+        let json = serde_json::to_string(&user_daos).expect("Failed to turn to json");
+        fs::write(file_path, json).expect("Failed to write to path");
+        user_daos
     }
 }
 
 pub fn login() -> Option<Access> {
     let mut attempts = 0;
-    let user_daos = UserDao::get_all();
+    let user_daos = get_all_user_daos();
 
     while attempts < MAX_ATTEMPTS {
         println!("{}/{MAX_ATTEMPTS}", attempts + 1);
@@ -46,15 +73,16 @@ pub fn login() -> Option<Access> {
         let username = username.to_lowercase();
         let password = util::get_input("Enter password:");
 
-        let user = user_daos
-            .iter()
-            .find(|u| u.username.to_lowercase() == username && u.password == password)
-            .cloned();
-        let Some(user) = user else {
+        let Some(user) = user_daos.get(&username) else {
             attempts += 1;
             println!("Wrong credentials");
             continue;
         };
+        if user.password != password {
+            attempts += 1;
+            println!("Wrong credentials");
+            continue;
+        }
 
         return match user {
             UserDao {
